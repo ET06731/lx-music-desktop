@@ -9,6 +9,7 @@ import {
   request,
   cancelRequest,
   setAllowShowUpdateAlert,
+  getScript,
 } from '@main/modules/userApi'
 import { sendEvent } from '@main/modules/winMain/main'
 
@@ -27,6 +28,10 @@ export default () => {
 
   mainHandle<LX.UserApi.UserApiInfo[]>(WIN_MAIN_RENDERER_EVENT_NAME.get_user_api_list, async() => {
     return getApiList()
+  })
+
+  mainHandle<string, string>(WIN_MAIN_RENDERER_EVENT_NAME.get_user_api_script, async({ params: apiId }) => {
+    return getScript(apiId)
   })
 
   mainHandle<LX.UserApi.UserApiStatus>(WIN_MAIN_RENDERER_EVENT_NAME.get_user_api_status, async() => {

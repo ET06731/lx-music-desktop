@@ -1,5 +1,5 @@
 import { closeWindow } from './main'
-import { getUserApis, importApi as handleImportApi, removeApi as handleRemoveApi, setAllowShowUpdateAlert as saveAllowShowUpdateAlert } from './utils'
+import { getUserApis, importApi as handleImportApi, removeApi as handleRemoveApi, setAllowShowUpdateAlert as saveAllowShowUpdateAlert, getScript } from './utils'
 import { loadApi, setAllowShowUpdateAlert as setRendererEventAllowShowUpdateAlert, init } from './rendererEvent/rendererEvent'
 
 let userApiId: string | null
@@ -37,6 +37,7 @@ export const setAllowShowUpdateAlert = (id: string, enable: boolean) => {
   setRendererEventAllowShowUpdateAlert(id, enable)
 }
 
+export { getScript }
 
 export * from './rendererEvent/rendererEvent'
 

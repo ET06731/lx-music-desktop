@@ -2,12 +2,15 @@
   <div :class="$style.container">
     <div :class="$style.header">
       <base-tab v-model="source" :list="sources" @change="handleSourceChange" />
-      <base-tab v-model="searchType" :list="searchTypes" @change="handleTypeChange" />
+      <base-tab v-if="source != 'wy_cloud'" v-model="searchType" :list="searchTypes" @change="handleTypeChange" />
     </div>
     <div :class="$style.main">
-      <song-list-list v-if="searchType == 'songlist'" v-show="searchText" :page="page" :source-id="source" />
-      <music-list v-else v-show="searchText" :page="page" :source-id="source" />
-      <blank-view :visible="!searchText" :source="source" />
+      <wy-cloud-list v-if="source == 'wy_cloud'" :page="page" :keyword="searchText" />
+      <template v-else>
+        <song-list-list v-if="searchType == 'songlist'" v-show="searchText" :page="page" :source-id="source" />
+        <music-list v-else v-show="searchText" :page="page" :source-id="source" />
+        <blank-view :visible="!searchText" :source="source" />
+      </template>
     </div>
   </div>
 </template>
@@ -21,6 +24,7 @@ import { sources as _sources } from '@renderer/store/search/music'
 import MusicList from './MusicList/index.vue'
 import SongListList from './SongListList/index.vue'
 import BlankView from './components/BlankView.vue'
+import WyCloudList from './WyCloudList/index.vue'
 import { computed, ref } from '@common/utils/vueTools'
 import { sourceNames } from '@renderer/store'
 
@@ -62,6 +66,7 @@ export default {
     MusicList,
     SongListList,
     BlankView,
+    WyCloudList,
   },
   beforeRouteEnter: verifyQueryParams,
   beforeRouteUpdate: verifyQueryParams,
@@ -75,12 +80,19 @@ export default {
         label: sourceNames.value[id],
       }
     })
+    const wyIndex = sources.findIndex(item => item.id == 'wy')
+    sources.splice(wyIndex > -1 ? wyIndex + 1 : sources.length, 0, {
+      id: 'wy_cloud',
+      label: window.i18n.t('source_wy_cloud'),
+    })
     const handleSourceChange = (id) => {
+      if (id == 'wy_cloud') searchText.value = ''
       void router.replace({
         path: route.path,
         query: {
           ...route.query,
           source: id,
+          type: id == 'wy_cloud' ? 'music' : searchType.value,
           page: 1,
         },
       })
@@ -139,4 +151,5 @@ export default {
   flex: auto;
   // min-height: 0;
 }
+
 </style>

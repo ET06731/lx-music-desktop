@@ -632,6 +632,7 @@
   "source_mg": "Migu",
   "source_tx": "Tencent",
   "source_wy": "NetEase",
+  "source_wy_cloud": "NetEase Cloud",
   "source_xm": "Xiami",
   "sync__auth_code_input_tip": "Please enter the connection code",
   "sync__auth_code_title": "Need to enter the connection code",
@@ -744,5 +745,9 @@
   "user_api_import_online__input_confirm": "Import",
   "user_api_import_online__input_loading": "Importing...",
   "user_api_import_online__input_tip": "Please enter an HTTP link",
-  "user_api_import_online__title": "Import Music API from network."
+  "user_api_import_online__title": "Import Music API from network.",
+  "wy_cloud__script_invalid": "The current custom source does not expose the configuration required for NetEase Cloud access.",
+  "wy_cloud__search_not_supported": "This NetEase Cloud tab currently supports browsing only. Clear the search text to continue.",
+  "wy_cloud__source_required": "Enable a custom source that provides the NetEase Cloud endpoints first.",
+  "wy_cloud__tip": "Browse NetEase Cloud songs from the current custom source"
 }

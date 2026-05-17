@@ -632,6 +632,7 @@
   "source_mg": "咪咕音樂",
   "source_tx": "企鵝音樂",
   "source_wy": "網易音樂",
+  "source_wy_cloud": "網易雲網盤",
   "source_xm": "蝦米音樂",
   "sync__auth_code_input_tip": "請輸入連線碼",
   "sync__auth_code_title": "需要輸入連線碼",
@@ -744,5 +745,9 @@
   "user_api_import_online__input_confirm": "匯入",
   "user_api_import_online__input_loading": "匯入中...",
   "user_api_import_online__input_tip": "請輸入 HTTP 連結",
-  "user_api_import_online__title": "從線上匯入自訂來源 API"
+  "user_api_import_online__title": "從線上匯入自訂來源 API",
+  "wy_cloud__script_invalid": "目前自訂源沒有提供網易雲網盤入口所需設定",
+  "wy_cloud__search_not_supported": "網易雲網盤入口目前只支援列表瀏覽，請清空搜尋內容後繼續查看",
+  "wy_cloud__source_required": "請先啟用包含網易雲網盤介面的自訂源",
+  "wy_cloud__tip": "瀏覽目前自訂源提供的網易雲網盤歌曲"
 }

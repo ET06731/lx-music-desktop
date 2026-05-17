@@ -632,6 +632,7 @@
   "source_mg": "咪咕音乐",
   "source_tx": "企鹅音乐",
   "source_wy": "网易音乐",
+  "source_wy_cloud": "网易云网盘",
   "source_xm": "虾米音乐",
   "sync__auth_code_input_tip": "请输入连接码",
   "sync__auth_code_title": "需要输入连接码",
@@ -744,5 +745,9 @@
   "user_api_import_online__input_confirm": "导入",
   "user_api_import_online__input_loading": "导入中...",
   "user_api_import_online__input_tip": "请输入 HTTP 链接",
-  "user_api_import_online__title": "在线导入自定义源"
+  "user_api_import_online__title": "在线导入自定义源",
+  "wy_cloud__script_invalid": "当前自定义源没有提供网易云网盘入口所需配置",
+  "wy_cloud__search_not_supported": "网易云网盘入口当前只支持列表浏览，请清空搜索内容后继续查看",
+  "wy_cloud__source_required": "请先启用包含网易云网盘接口的自定义源",
+  "wy_cloud__tip": "浏览当前自定义源提供的网易云网盘歌曲"
 }
