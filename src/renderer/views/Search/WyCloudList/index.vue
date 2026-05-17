@@ -76,7 +76,7 @@ interface ListInfo {
   noItemLabel: string
 }
 
-interface CloudMusicMeta extends LX.Music.MusicInfo['meta'] {
+type CloudMusicMeta = LX.Music.MusicInfo['meta'] & {
   cloudSongId?: string
   picUrl?: string
   cloudLyricInfo?: {
