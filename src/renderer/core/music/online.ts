@@ -12,6 +12,9 @@ import {
   handleGetOnlineMusicUrl,
   handleGetOnlinePicUrl,
   getCachedLyricInfo,
+  existTimeExp,
+  getOtherSource,
+  getOnlineOtherSourceLyricInfo,
 } from './utils'
 
 /* export const setMusicUrl = ({ musicInfo, type, url }: {
@@ -44,6 +47,24 @@ type CloudMusicMeta = LX.Music.MusicInfoOnline['meta'] & {
 }
 
 const getCloudMeta = (musicInfo: LX.Music.MusicInfoOnline) => musicInfo.meta as CloudMusicMeta
+const hasValidLyric = (lyricInfo?: MakeOptional<LX.Player.LyricInfo, 'rawlrcInfo'> | LX.Music.LyricInfo | null) => {
+  return !!lyricInfo && existTimeExp.test(lyricInfo.lyric ?? '')
+}
+const getFallbackLyricInfo = async({ musicInfo, onToggleSource, isRefresh }: {
+  musicInfo: LX.Music.MusicInfoOnline
+  onToggleSource: (musicInfo?: LX.Music.MusicInfoOnline) => void
+  isRefresh: boolean
+}) => {
+  const otherSource = await getOtherSource(musicInfo, isRefresh)
+  if (!otherSource.length) throw new Error('lyric fallback failed')
+
+  return getOnlineOtherSourceLyricInfo({
+    musicInfos: [...otherSource],
+    onToggleSource,
+    isRefresh,
+    retryedSource: [musicInfo.source],
+  })
+}
 
 
 export const getMusicUrl = async({ musicInfo, quality, isRefresh, allowToggleSource = true, onToggleSource = () => {} }: {
@@ -96,7 +117,9 @@ export const getLyricInfo = async({ musicInfo, isRefresh, allowToggleSource = tr
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
 }): Promise<LX.Player.LyricInfo> => {
   const cloudMeta = getCloudMeta(musicInfo)
-  if (cloudMeta.cloudLyricInfo && !isRefresh) return buildLyricInfo(cloudMeta.cloudLyricInfo)
+  const isCloudMusic = !!cloudMeta.cloudSongId
+
+  if (hasValidLyric(cloudMeta.cloudLyricInfo) && !isRefresh) return buildLyricInfo(cloudMeta.cloudLyricInfo!)
 
   if (!isRefresh) {
     const lyricInfo = await getCachedLyricInfo(musicInfo)
@@ -106,10 +129,22 @@ export const getLyricInfo = async({ musicInfo, isRefresh, allowToggleSource = tr
   // lrcRequest = music[musicInfo.source].getLyric(musicInfo)
   return handleGetOnlineLyricInfo({ musicInfo, onToggleSource, isRefresh, allowToggleSource }).then(async({ lyricInfo, musicInfo: targetMusicInfo, isFromCache }) => {
     // lrcRequest = null
+    if (!hasValidLyric(lyricInfo) && isCloudMusic && allowToggleSource) {
+      const fallbackResult = await getFallbackLyricInfo({ musicInfo, onToggleSource, isRefresh })
+      return buildLyricInfo(fallbackResult.lyricInfo)
+    }
+
     if (isFromCache) return buildLyricInfo(lyricInfo)
     if (targetMusicInfo.id == musicInfo.id) void saveLyric(musicInfo, lyricInfo)
     else void saveLyric(targetMusicInfo, lyricInfo)
 
     return buildLyricInfo(lyricInfo)
+  }).catch(async(err: any) => {
+    if (!isCloudMusic || !allowToggleSource) throw err
+
+    const fallbackResult = await getFallbackLyricInfo({ musicInfo, onToggleSource, isRefresh })
+    if (!fallbackResult.isFromCache) void saveLyric(fallbackResult.musicInfo, fallbackResult.lyricInfo)
+
+    return buildLyricInfo(fallbackResult.lyricInfo)
   })
 }
