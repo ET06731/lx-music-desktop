@@ -37,7 +37,7 @@ export const setPic = (datas: {
 }
  */
 
-interface CloudMusicMeta extends LX.Music.MusicInfoOnline['meta'] {
+type CloudMusicMeta = LX.Music.MusicInfoOnline['meta'] & {
   cloudSongId?: string
   picUrl?: string
   cloudLyricInfo?: MakeOptional<LX.Player.LyricInfo, 'rawlrcInfo'>
