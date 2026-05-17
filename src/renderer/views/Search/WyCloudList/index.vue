@@ -31,7 +31,18 @@ interface Props {
   keyword: string
 }
 
-interface CloudSong {
+interface CloudLyricFields {
+  lyric?: string
+  lrc?: string
+  tlyric?: string
+  tlrc?: string
+  rlyric?: string
+  rlrc?: string
+  lxlyric?: string
+  rawlrc?: string
+}
+
+interface CloudSong extends CloudLyricFields {
   id?: string | number
   songId?: string | number
   matchSongId?: string | number
@@ -41,7 +52,9 @@ interface CloudSong {
   album?: string
   duration?: number
   cover?: string
+  picUrl?: string
   quality?: string | null
+  lyrics?: CloudLyricFields
 }
 
 interface CloudResponse {
@@ -61,6 +74,17 @@ interface ListInfo {
   total: number
   list: LX.Music.MusicInfo[]
   noItemLabel: string
+}
+
+interface CloudMusicMeta extends LX.Music.MusicInfo['meta'] {
+  cloudSongId?: string
+  picUrl?: string
+  cloudLyricInfo?: {
+    lyric: string
+    tlyric: string
+    rlyric: string
+    lxlyric: string
+  }
 }
 
 const props = defineProps<Props>()
@@ -134,8 +158,27 @@ const buildQualityInfo = (quality?: string | null) => {
   return { types, _types }
 }
 
+const firstString = (...values: Array<string | undefined | null>) => values.find(value => typeof value == 'string' && value.trim()) ?? ''
+
+const normalizeCloudLyricInfo = (song: CloudSong) => {
+  const lyric = firstString(song.lyric, song.lrc, song.lyrics?.lyric, song.lyrics?.lrc)
+  const tlyric = firstString(song.tlyric, song.tlrc, song.lyrics?.tlyric, song.lyrics?.tlrc)
+  const rlyric = firstString(song.rlyric, song.rlrc, song.lyrics?.rlyric, song.lyrics?.rlrc)
+  const lxlyric = firstString(song.lxlyric, song.lyrics?.lxlyric)
+
+  if (!lyric && !tlyric && !rlyric && !lxlyric) return null
+
+  return {
+    lyric,
+    tlyric,
+    rlyric,
+    lxlyric,
+  }
+}
+
 const normalizeSong = (song: CloudSong) => {
   const songId = String(song.matchSongId ?? song.songId ?? song.id ?? '')
+  const picUrl = song.cover ?? song.picUrl ?? ''
   const { types, _types } = buildQualityInfo(song.quality)
   const musicInfo = toNewMusicInfo({
     source: 'wy',
@@ -144,13 +187,18 @@ const normalizeSong = (song: CloudSong) => {
     singer: song.artist ?? '',
     interval: song.duration ? formatPlayTime(song.duration / 1000) : '--/--',
     albumName: song.album ?? '',
-    img: song.cover ?? '',
+    img: picUrl,
     types,
     _types,
     albumId: '',
   })
-  const cloudMeta = musicInfo.meta as LX.Music.MusicInfo['meta'] & { cloudSongId?: string }
+  const cloudMeta = musicInfo.meta as CloudMusicMeta
   if (song.cloudSongId != null) cloudMeta.cloudSongId = String(song.cloudSongId)
+  if (picUrl) cloudMeta.picUrl = picUrl
+
+  const cloudLyricInfo = normalizeCloudLyricInfo(song)
+  if (cloudLyricInfo) cloudMeta.cloudLyricInfo = cloudLyricInfo
+
   return musicInfo
 }
 
