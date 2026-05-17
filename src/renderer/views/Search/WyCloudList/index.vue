@@ -76,7 +76,12 @@ const listInfo = ref<ListInfo>({
   noItemLabel: '',
 })
 
+const CLOUD_SEARCH_LIMIT = 1000
+
 let requestObj: HttpFetchTask<{ body: CloudResponse }> | null = null
+let loadId = 0
+let cloudCache: CloudSong[] = []
+let cloudCacheApiSource = ''
 
 const clearList = (message = '') => {
   listInfo.value.list = []
@@ -156,7 +161,82 @@ const normalizeSong = (song: CloudSong) => {
   return musicInfo
 }
 
+const normalizeKeyword = (text?: string | number | null) => String(text ?? '')
+  .toLowerCase()
+  .replace(/\s+/g, '')
+
+const isMatchedSong = (song: CloudSong, keyword: string) => {
+  const target = [
+    song.name,
+    song.artist,
+    song.album,
+    song.id,
+    song.songId,
+    song.matchSongId,
+    song.cloudSongId,
+  ].map(normalizeKeyword).join('|')
+
+  return target.includes(keyword)
+}
+
+const requestCloudList = async(apiBase: string, token: string, limit: number, offset: number) => {
+  requestObj = httpFetch(buildUrl(apiBase, '/cloud/list', {
+    token,
+    limit,
+    offset,
+  }), {
+    method: 'get',
+  }) as unknown as HttpFetchTask<{ body: CloudResponse }>
+
+  const response = await requestObj.promise
+  return response.body ?? {}
+}
+
+const loadAllCloudSongs = async(apiBase: string, token: string, currentLoadId: number) => {
+  const cacheKey = appSetting['common.apiSource']
+
+  if (cloudCacheApiSource === cacheKey && cloudCache.length) return cloudCache
+
+  const firstData = await requestCloudList(apiBase, token, CLOUD_SEARCH_LIMIT, 0)
+  if (currentLoadId !== loadId) return []
+
+  const songs = Array.isArray(firstData.songs) ? [...firstData.songs] : []
+  const total = Number(firstData.count) || songs.length
+
+  for (let offset = songs.length; offset < total; offset += CLOUD_SEARCH_LIMIT) {
+    const data = await requestCloudList(apiBase, token, CLOUD_SEARCH_LIMIT, offset)
+    if (currentLoadId !== loadId) return []
+
+    if (Array.isArray(data.songs) && data.songs.length) songs.push(...data.songs)
+    else break
+  }
+
+  cloudCache = songs
+  cloudCacheApiSource = cacheKey
+
+  return songs
+}
+
+const updateListInfo = (songs: CloudSong[], total: number) => {
+  const start = (props.page - 1) * listInfo.value.limit
+  const pageSongs = songs.slice(start, start + listInfo.value.limit)
+  const list = markRawList(pageSongs.map(normalizeSong))
+
+  listInfo.value.list = list
+  listInfo.value.total = total
+  listInfo.value.maxPage = Math.max(1, Math.ceil(total / listInfo.value.limit))
+  listInfo.value.noItemLabel = list.length ? '' : window.i18n.t('no_item')
+
+  if (list.length) {
+    setTimeout(() => {
+      listRef.value?.scrollToTop?.()
+    })
+  }
+}
+
 const loadList = async() => {
+  const currentLoadId = ++loadId
+
   requestObj?.cancelHttp?.()
   listInfo.value.page = props.page
 
@@ -165,10 +245,7 @@ const loadList = async() => {
     return Promise.resolve()
   }
 
-  if (props.keyword.trim()) {
-    clearList(window.i18n.t('wy_cloud__search_not_supported'))
-    return Promise.resolve()
-  }
+  const keyword = normalizeKeyword(props.keyword.trim())
 
   listInfo.value.noItemLabel = window.i18n.t('list__loading')
 
@@ -179,36 +256,48 @@ const loadList = async() => {
     }
 
     const { apiBase, token } = parseBridgeConfig(script)
-    requestObj = httpFetch(buildUrl(apiBase, '/cloud/list', {
-      token,
-      limit: listInfo.value.limit,
-      offset: (props.page - 1) * listInfo.value.limit,
-    }), {
-      method: 'get',
-    }) as unknown as HttpFetchTask<{ body: CloudResponse }>
-    return await requestObj.promise
-  }).then(response => {
-    if (!response) return
-    const data = response.body ?? {}
-    const list = Array.isArray(data.songs) ? markRawList(data.songs.map(normalizeSong)) : []
 
-    listInfo.value.list = list
-    listInfo.value.total = Number(data.count) || 0
-    listInfo.value.maxPage = Math.max(1, Math.ceil(listInfo.value.total / listInfo.value.limit))
-    listInfo.value.noItemLabel = list.length ? '' : window.i18n.t('no_item')
+    if (keyword) {
+      const allSongs = await loadAllCloudSongs(apiBase, token, currentLoadId)
+      if (currentLoadId !== loadId) return null
 
-    if (list.length) {
-      setTimeout(() => {
-        listRef.value?.scrollToTop?.()
-      })
+      const filteredSongs = allSongs.filter(song => isMatchedSong(song, keyword))
+      updateListInfo(filteredSongs, filteredSongs.length)
+
+      return null
     }
+
+    const songsData = await requestCloudList(
+      apiBase,
+      token,
+      listInfo.value.limit,
+      (props.page - 1) * listInfo.value.limit,
+    )
+
+    if (currentLoadId !== loadId) return null
+
+    return songsData
+  }).then(data => {
+    if (!data) return
+
+    const songs = Array.isArray(data.songs) ? data.songs : []
+    const total = Number(data.count) || 0
+
+    updateListInfo(songs, total)
   }).catch((error: any) => {
+    if (currentLoadId !== loadId) return
+
     console.log(error)
     clearList(error?.message === 'missing bridge config'
       ? window.i18n.t('wy_cloud__script_invalid')
       : window.i18n.t('list__load_failed'))
   })
 }
+
+watch(() => appSetting['common.apiSource'], () => {
+  cloudCache = []
+  cloudCacheApiSource = ''
+})
 
 watch(() => [props.page, props.keyword, appSetting['common.apiSource']], () => {
   void loadList()

@@ -86,7 +86,6 @@ export default {
       label: window.i18n.t('source_wy_cloud'),
     })
     const handleSourceChange = (id) => {
-      if (id == 'wy_cloud') searchText.value = ''
       void router.replace({
         path: route.path,
         query: {
