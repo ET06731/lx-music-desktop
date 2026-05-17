@@ -37,6 +37,14 @@ export const setPic = (datas: {
 }
  */
 
+interface CloudMusicMeta extends LX.Music.MusicInfoOnline['meta'] {
+  cloudSongId?: string
+  picUrl?: string
+  cloudLyricInfo?: MakeOptional<LX.Player.LyricInfo, 'rawlrcInfo'>
+}
+
+const getCloudMeta = (musicInfo: LX.Music.MusicInfoOnline) => musicInfo.meta as CloudMusicMeta
+
 
 export const getMusicUrl = async({ musicInfo, quality, isRefresh, allowToggleSource = true, onToggleSource = () => {} }: {
   musicInfo: LX.Music.MusicInfoOnline
@@ -69,11 +77,12 @@ export const getPicUrl = async({ musicInfo, listId, isRefresh, allowToggleSource
   allowToggleSource?: boolean
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
 }): Promise<string> => {
-  if (musicInfo.meta.picUrl && !isRefresh) return musicInfo.meta.picUrl
+  const cloudMeta = getCloudMeta(musicInfo)
+  if (cloudMeta.picUrl && !isRefresh) return cloudMeta.picUrl
   return handleGetOnlinePicUrl({ musicInfo, onToggleSource, isRefresh, allowToggleSource }).then(({ url, musicInfo: targetMusicInfo, isFromCache }) => {
     // picRequest = null
     if (listId) {
-      musicInfo.meta.picUrl = url
+      cloudMeta.picUrl = url
       void updateListMusics([{ id: listId, musicInfo }])
     }
     // savePic({ musicInfo, url, listId })
@@ -86,6 +95,9 @@ export const getLyricInfo = async({ musicInfo, isRefresh, allowToggleSource = tr
   allowToggleSource?: boolean
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
 }): Promise<LX.Player.LyricInfo> => {
+  const cloudMeta = getCloudMeta(musicInfo)
+  if (cloudMeta.cloudLyricInfo && !isRefresh) return buildLyricInfo(cloudMeta.cloudLyricInfo)
+
   if (!isRefresh) {
     const lyricInfo = await getCachedLyricInfo(musicInfo)
     if (lyricInfo) return buildLyricInfo(lyricInfo)
