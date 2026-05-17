@@ -7,7 +7,6 @@
       :total="listInfo.total"
       :list="listInfo.list"
       :no-item="listInfo.noItemLabel"
-      check-api-source
       @toggle-page="handleTogglePage"
       @play-list="handlePlayList"
     />
@@ -87,20 +86,26 @@ const clearList = (message = '') => {
   listInfo.value.noItemLabel = message
 }
 
-const unescapeSingleQuotedJsString = (value: string) => value
+const unescapeJsString = (value: string) => value
   .replace(/\\\\/g, '\\')
   .replace(/\\'/g, '\'')
+  .replace(/\\"/g, '"')
   .replace(/\\r/g, '\r')
   .replace(/\\n/g, '\n')
 
+const matchConstString = (script: string, name: string) => {
+  const result = new RegExp(`(?:const|let|var)\\s+${name}\\s*=\\s*(['\"])((?:\\\\.|(?!\\1).)*)\\1`).exec(script)
+  return result ? unescapeJsString(result[2]) : ''
+}
+
 const parseBridgeConfig = (script: string) => {
-  const apiBaseMatch = script.match(/const API_BASE = '((?:\\.|[^'])*)'/)
-  const tokenMatch = script.match(/const ACCESS_TOKEN = '((?:\\.|[^'])*)'/)
-  if (!apiBaseMatch || !tokenMatch) throw new Error('missing bridge config')
+  const apiBase = matchConstString(script, 'API_BASE')
+  const token = matchConstString(script, 'ACCESS_TOKEN')
+  if (!apiBase || !token) throw new Error('missing bridge config')
 
   return {
-    apiBase: unescapeSingleQuotedJsString(apiBaseMatch[1]),
-    token: unescapeSingleQuotedJsString(tokenMatch[1]),
+    apiBase,
+    token,
   }
 }
 
@@ -144,8 +149,10 @@ const normalizeSong = (song: CloudSong) => {
     _types,
     albumId: '',
   })
-  const cloudMeta = musicInfo.meta as LX.Music.MusicInfo['meta'] & { cloudSongId?: string }
-  if (song.cloudSongId != null) cloudMeta.cloudSongId = String(song.cloudSongId)
+  if (song.cloudSongId != null) {
+    musicInfo.meta ??= {}
+    ;(musicInfo.meta as LX.Music.MusicInfo['meta'] & { cloudSongId?: string }).cloudSongId = String(song.cloudSongId)
+  }
   return musicInfo
 }
 
