@@ -1,7 +1,7 @@
 <template>
-  <div id="my-list" :class="$style.container" @click="handleContainerClick">
-    <MyList ref="myList" :list-id="listId" @show-menu="$refs.musicList.handleMenuClick()" />
-    <MusicList ref="musicList" :list-id="listId" @show-menu="$refs.myList.handleMenuClick()" />
+  <div id="my-list" :class="$style.container">
+    <MyList v-if="!listId" :active-id="lastListId" />
+    <DetailView v-else ref="detailView" :list-id="listId" @back="handleBackToOverview" />
   </div>
 </template>
 
@@ -9,52 +9,59 @@
 import { getListPrevSelectId } from '@renderer/utils/data'
 
 import MyList from './MyList/index.vue'
-import MusicList from './MusicList/index.vue'
+import DetailView from './DetailView.vue'
 
 export default {
   name: 'List',
   components: {
     MyList,
-    MusicList,
-  },
-  async beforeRouteEnter(to, from, next) {
-    let id = to.query.id
-    if (!id) {
-      id = await getListPrevSelectId()
-      next({
-        path: to.path,
-        query: { id },
-      })
-    } else next()
+    DetailView,
   },
   beforeRouteUpdate(to, from) {
-    // console.log(to, from)
+    this.syncRoute(to, from)
     if (to.query.updated) return
-    let id = to.query.id
-    if (id == null) return
-    // if (!getList(id)) {
-    //   id = defaultList.id
-    // }
-    this.listId = id
-    const scrollIndex = to.query.scrollIndex
-    const isAnimation = from.query.id == to.query.id
-    this.$refs.musicList?.handleRestoreScroll(scrollIndex, isAnimation)
-
-    return {
-      path: '/list',
-      query: { id, updated: true },
+    if (to.query.id != null && to.query.scrollIndex != null) {
+      return {
+        path: '/list',
+        query: {
+          id: to.query.id,
+          updated: true,
+        },
+      }
     }
   },
-  beforeRouteLeave(to, from) {
-    this.$refs.musicList?.saveListPosition()
+  beforeRouteLeave() {
+    this.$refs.detailView?.saveListPosition?.()
   },
   data() {
     return {
       listId: null,
+      lastListId: null,
     }
   },
   created() {
-    this.listId = this.$route.query.id
+    this.syncRoute(this.$route)
+    if (!this.lastListId) {
+      void getListPrevSelectId().then(id => {
+        if (!this.lastListId) this.lastListId = id
+      })
+    }
+  },
+  methods: {
+    syncRoute(route, from) {
+      const id = typeof route.query.id == 'string' ? route.query.id : null
+      this.listId = id
+      if (id) this.lastListId = id
+      if (id && route.query.scrollIndex != null) {
+        const isAnimation = from?.query.id == route.query.id
+        this.$nextTick(() => {
+          this.$refs.detailView?.handleRestoreScroll?.(route.query.scrollIndex, isAnimation)
+        })
+      }
+    },
+    handleBackToOverview() {
+      void this.$router.replace({ path: '/list' })
+    },
   },
 }
 </script>
